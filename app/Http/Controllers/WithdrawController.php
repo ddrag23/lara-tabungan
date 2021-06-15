@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Savings;
 use App\Models\Withdraw;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class WithdrawController extends Controller
 {
@@ -14,17 +18,7 @@ class WithdrawController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
+        return $this->successResponse(Withdraw::paginate());
     }
 
     /**
@@ -35,7 +29,30 @@ class WithdrawController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required',
+            'nominal' => 'required'
+        ]);
+        if ($validator->fails()) {
+            return $this->errorResponse('Masukkan data dengan benar', $validator->errors());
+        }
+        $saving = new Savings();
+        $find = $saving->where('user_id', auth()->user()->id);
+        $saldo = $find->sum('saldo');
+        if ($saldo == 0 ) {
+            return response(['message' => 'Saldo yang anda miliki telah habis']);
+        }
+        $withdraw =  $saldo - $request->nominal ;
+        DB::beginTransaction();
+        try {
+            Withdraw::create($request->all());
+            $find->update(['saldo' => $withdraw]);
+            DB::commit();
+            return $this->successResponse($request->all(), 'Data berhasil disimpan');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response(['error' => $e->getMessage()], 400);
+        }
     }
 
     /**
@@ -48,30 +65,6 @@ class WithdrawController extends Controller
     {
         //
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Withdraw  $withdraw
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Withdraw $withdraw)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Withdraw  $withdraw
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Withdraw $withdraw)
-    {
-        //
-    }
-
     /**
      * Remove the specified resource from storage.
      *
@@ -80,6 +73,7 @@ class WithdrawController extends Controller
      */
     public function destroy(Withdraw $withdraw)
     {
-        //
+        $withdraw->delete();
+        return $this->successResponse(message:"Data penarikan saldo berhasil dihapus");
     }
 }
