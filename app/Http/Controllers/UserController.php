@@ -14,12 +14,24 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response([
-            'success' => true,
-            'data' => User::paginate()
-        ]);
+        if (!is_null($request->search)) {
+            // return response('ok');
+            return response()->json([
+                'data' => User::where(
+                    'name',
+                    'LIKE',
+                    '%' . $request->search . '%'
+                )->paginate(10),
+            ]);
+        }
+        return $this->successResponse(User::paginate(10));
+    }
+
+    public function allUser()
+    {
+        return response(User::get());
     }
 
     /**
@@ -32,31 +44,40 @@ class UserController extends Controller
     {
         $rules = [
             'name' => 'required',
-            'username' => 'required|unique:users,username,'.$request->id,
+            'username' => 'required|unique:users,username,' . $request->id,
             'email' => 'required',
             'alamat' => 'required',
             'notelp' => 'required|numeric',
-            'jenis_kelamin' => 'required'
+            'jenis_kelamin' => 'required',
         ];
         if ($request->has('password') && !empty($request->password)) {
             $rules['password'] = 'confirmed';
         }
-        $validator = Validator::make($request->all(),$rules);
+        $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors(),'message' => 'Masukkan Data Dengan Benar']);
+            return response()->json([
+                'errors' => $validator->errors(),
+                'message' => 'Masukkan Data Dengan Benar',
+            ]);
         }
         $req = $request->all();
         $user = new User();
         // dd($role);
-        if(!empty($request->id)){
-            $password = !empty($request->password) ? Hash::make($request->password) : $user->find($req['id'])->password;
-        }else{
-            $password = Hash::make("12345");
+        if (!empty($request->id)) {
+            $password = !is_null($request->password)
+                ? Hash::make($request->password)
+                : $user->find($req['id'])->password;
+        } else {
+            $password = Hash::make('12345');
         }
         $req['password'] = $password;
-        User::updateOrCreate(['id' => $request->id],$req);
+        User::updateOrCreate(['id' => $request->id], $req);
         $message = !is_null($request->id) ? 'diperbarui' : 'ditambah';
-        return response()->json(['success' => $request->all(),'message' => "Data berhasil {$message}"]);
+        return response()->json([
+            'success' => 200,
+            'message' => "Data berhasil {$message}",
+            's' => $request->password,
+        ]);
     }
 
     /**
@@ -69,22 +90,9 @@ class UserController extends Controller
     {
         return response([
             'success' => true,
-            'data' => User::find($id)
+            'data' => User::find($id),
         ]);
     }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
     /**
      * Remove the specified resource from storage.
      *
@@ -96,7 +104,7 @@ class UserController extends Controller
         $user->delete();
         return response([
             'success' => true,
-            'message' => 'Data user berhasil dihapus'
+            'message' => 'Data user berhasil dihapus',
         ]);
     }
 }

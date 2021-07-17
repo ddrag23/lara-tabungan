@@ -17,9 +17,20 @@ class DepositController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return $this->successResponse(Deposit::paginate());
+        if (!is_null($request->search)) {
+            // return response('ok');
+            return response()->json(['data' => Deposit::with('user')->whereHas('user',function($query) use ($request){
+                $query->where('name', 'LIKE', '%'.$request->search.'%');
+            })->paginate(10)]);
+        }
+        return $this->successResponse(Deposit::with('user')->paginate(10));
+    }
+
+    public function countDeposit($userId)
+    {
+        return response()->json(Deposit::where('user_id',$userId)->sum('nominal'));
     }
 
     /**
@@ -40,15 +51,22 @@ class DepositController extends Controller
         DB::beginTransaction();
         try {
             $saving = new Savings();
-            $find = $saving->where('user_id',auth()->user()->id);
+            $find = $saving->where('user_id',$request->user_id);
             $deposit = $request->nominal + $find->sum('saldo');
             Deposit::create($request->all());
-            $find->update(['saldo' => $deposit]);
+            if ($find->get()->isEmpty()) {
+                $saving->create([
+                    'user_id' => $request->user_id,
+                    'saldo' => $deposit
+                ]);
+            }else{
+                $find->update(['saldo' => $deposit]);
+            }
             DB::commit();
             return $this->successResponse($request->all(),'Data berhasil disimpan');
         } catch (Exception $e) {
             DB::rollBack();
-            return response(['error' => $e->getMessage()],400);
+            return response(['error' => $e->getMessage()],500);
         }
     }
 
@@ -60,6 +78,10 @@ class DepositController extends Controller
      */
     public function destroy(Deposit $deposit)
     {
+        $savings = Savings::where('user_id',$deposit->user_id)->first();
+        Savings::where('user_id',$deposit->user_id)->update([
+            'saldo' => $savings->saldo - $deposit->nominal
+        ]);
         $deposit->delete();
         $this->successResponse(message:'Data berhasil dihapus');
     }

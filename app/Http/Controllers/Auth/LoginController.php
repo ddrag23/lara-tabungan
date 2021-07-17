@@ -30,7 +30,7 @@ class LoginController extends Controller
         }
         $user = User::where('username',$request->username)->first();
         if (!$user || !Hash::check($request->password,$user->password)) {
-             response(['message' => 'Username atau password yang anda masukkan salah', 'success' => false],401);
+            return response(['message' => 'Username atau password yang anda masukkan salah', 'success' => false],200);
         }
 
         $token = $user->createToken('ApiToken')->plainTextToken;

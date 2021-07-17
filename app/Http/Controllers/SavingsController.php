@@ -12,9 +12,16 @@ class SavingsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return $this->successResponse(Savings::paginate());
+        // return response()->json($request->search);
+        if (!is_null($request->search)) {
+            // return response('ok');
+            return response()->json(['data' => Savings::with('user')->whereHas('user',function($query) use ($request){
+                $query->where('name', 'LIKE', '%'.$request->search.'%');
+            })->paginate(10)]);
+        }
+        return $this->successResponse(Savings::with('user')->paginate(10));
     }
 
     /**
@@ -25,7 +32,7 @@ class SavingsController extends Controller
      */
     public function show(Savings $savings)
     {
-        //
+        return response()->json($savings);
     }
     /**
      * Remove the specified resource from storage.

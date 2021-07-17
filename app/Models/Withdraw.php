@@ -9,5 +9,9 @@ class Withdraw extends Model
 {
     use HasFactory;
     protected $table = 'tb_withdraw';
-    protected $fillable = ['user_id','nominal'];
+    protected $fillable = ['user_id', 'nominal'];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

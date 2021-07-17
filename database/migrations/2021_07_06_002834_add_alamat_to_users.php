@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddRoleToUsers extends Migration
+class AddAlamatToUsers extends Migration
 {
     /**
      * Run the migrations.
@@ -14,7 +14,9 @@ class AddRoleToUsers extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['admin', 'user']);
+            $table->enum('jenis_kelamin',['L','P'])->nullable()->after('email');
+            $table->string('notelp',20)->nullable()->after('jenis_kelamin');
+            $table->text('alamat')->nullable()->after('notelp');
         });
     }
 
@@ -26,7 +28,7 @@ class AddRoleToUsers extends Migration
     public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role', 10);
+            $table->dropColumn(['jenis_kelamin','notelp','alamat']);
         });
     }
 }
